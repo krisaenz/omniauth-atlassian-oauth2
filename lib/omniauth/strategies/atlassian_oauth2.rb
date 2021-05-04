@@ -63,20 +63,20 @@ module OmniAuth
         # Jira's OAuth gives us many potential sites. To request information
         # about the user for the OmniAuth hash, pick the first one that has the
         # necessary 'read:jira-user' scope.
-        if ('read:jira-user')
-          jira_user_scope = 'read:jira-user'
-          site = sites.find do |candidate_site|
-            candidate_site['scopes'].include?(jira_user_scope)
-          end
-          unless site
-            raise "No site found with scope #{jira_user_scope}, please ensure the scope ${jira_user_scope} is added to your OmniAuth config"
-          end
+        jira_user_scope = 'read:jira-user'
 
+        site = sites.find do |candidate_site|
+          candidate_site['scopes'].include?(jira_user_scope)
+        end
+        # unless site
+        #   raise "No site found with scope #{jira_user_scope}, please ensure the scope ${jira_user_scope} is added to your OmniAuth config"
+        # end
+
+        if (site)
           cloud_id = site['id']
           base_url = "https://api.atlassian.com/ex/jira/#{cloud_id}"
 
           myself_url = "#{base_url}/rest/api/3/myself"
-
           myself = JSON.parse(access_token.get(myself_url).body)
 
           @raw_info ||= {
@@ -93,6 +93,7 @@ module OmniAuth
             'myself' => myself
           }
         end
+
       end
 
       # Override callback URL
