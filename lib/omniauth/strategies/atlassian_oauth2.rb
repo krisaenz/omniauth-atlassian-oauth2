@@ -27,13 +27,23 @@ module OmniAuth
         raw_info['myself']['accountId']
       end
 
+      # info do
+      #   {
+      #     name: raw_info['myself']['displayName'],
+      #     email: raw_info['myself']['emailAddress'],
+      #     nickname: raw_info['myself']['name'],
+      #     location: raw_info['myself']['timeZone'],
+      #     image: raw_info['myself']['avatarUrls']['48x48']
+      #   }
+      # end
+
       info do
         {
-          name: raw_info['myself']['displayName'],
-          email: raw_info['myself']['emailAddress'],
-          nickname: raw_info['myself']['name'],
-          location: raw_info['myself']['timeZone'],
-          image: raw_info['myself']['avatarUrls']['48x48']
+            name: raw_info['myself']['name'],
+            email: raw_info['myself']['email'],
+            nickname: raw_info['myself']['nickname'],
+            location: raw_info['myself']['zoneinfo'],
+            image: raw_info['myself']['picture']
         }
       end
 
@@ -53,26 +63,46 @@ module OmniAuth
         # Jira's OAuth gives us many potential sites. To request information
         # about the user for the OmniAuth hash, pick the first one that has the
         # necessary 'read:jira-user' scope.
-        jira_user_scope = 'read:jira-user'
-        site = sites.find do |candidate_site|
-          candidate_site['scopes'].include?(jira_user_scope)
+        if ('read:jira-user')
+          jira_user_scope = 'read:jira-user'
+          site = sites.find do |candidate_site|
+            candidate_site['scopes'].include?(jira_user_scope)
+          end
+          unless site
+            raise "No site found with scope #{jira_user_scope}, please ensure the scope ${jira_user_scope} is added to your OmniAuth config"
+          end
+
+          cloud_id = site['id']
+          base_url = "https://api.atlassian.com/ex/jira/#{cloud_id}"
+
+          myself_url = "#{base_url}/rest/api/3/myself"
+
+          myself = JSON.parse(access_token.get(myself_url).body)
+
+          @raw_info ||= {
+            'site' => site,
+            'sites' => sites,
+            'myself' => myself
+          }
+        else
+          myself_url = "https://api.atlassian.com/me"
+          myself = JSON.parse(access_token.get(myself_url).body)
+
+          @raw_info ||= {
+            'sites' => sites,
+            'myself' => myself
+          }
         end
-        unless site
-          raise "No site found with scope #{jira_user_scope}, please ensure the scope ${jira_user_scope} is added to your OmniAuth config"
-        end
-
-        cloud_id = site['id']
-        base_url = "https://api.atlassian.com/ex/jira/#{cloud_id}"
-        myself_url = "#{base_url}/rest/api/3/myself"
-
-        myself = JSON.parse(access_token.get(myself_url).body)
-
-        @raw_info ||= {
-          'site' => site,
-          'sites' => sites,
-          'myself' => myself
-        }
       end
+
+      # Override callback URL
+      # OmniAuth by default passes the entire URL of the callback, including
+      # query parameters. Azure fails validation because that doesn't match the
+      # registered callback.
+      def callback_url
+        options[:redirect_uri] || (full_host + script_name + callback_path)
+      end
+
     end
   end
 end
