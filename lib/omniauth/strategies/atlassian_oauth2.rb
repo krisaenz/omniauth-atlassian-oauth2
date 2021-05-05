@@ -27,6 +27,7 @@ module OmniAuth
         raw_info['myself']['accountId']
       end
 
+      # Jira info
       # info do
       #   {
       #     name: raw_info['myself']['displayName'],
@@ -37,6 +38,7 @@ module OmniAuth
       #   }
       # end
 
+      # Confluence info
       info do
         {
             name: raw_info['myself']['name'],
@@ -98,8 +100,7 @@ module OmniAuth
 
       # Override callback URL
       # OmniAuth by default passes the entire URL of the callback, including
-      # query parameters. Azure fails validation because that doesn't match the
-      # registered callback.
+      # query parameters. Alassian can only have one callback url.
       def callback_url
         options[:redirect_uri] || (full_host + script_name + callback_path)
       end
